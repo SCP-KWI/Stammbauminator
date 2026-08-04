@@ -1,0 +1,29 @@
+{
+  "name": "stammbauminator",
+  "version": "1.0.0",
+  "description": "Passwortgeschuetzte Familien-Stammbaum-Webapp (Express + node:sqlite)",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SCP-KWI/Stammbauminator.git"
+  },
+  "keywords": [],
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/SCP-KWI/Stammbauminator/issues"
+  },
+  "homepage": "https://github.com/SCP-KWI/Stammbauminator#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.2.0"
+  },
+  "author": "Philip Schaffner <philip@schaffner.xyz>"
+}

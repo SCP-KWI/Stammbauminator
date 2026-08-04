@@ -1,0 +1,279 @@
+/* ==========================================================================
+   Stammbauminator — Lern-Quiz «Namen lernen»
+   Nur Tokens aus tokens.css, keine eigenen Hex-Farben.
+   Das Kärtchen ist der Star — alles andere hält sich zurück.
+   ========================================================================== */
+
+.q-page { max-width: 640px; }
+
+/* --- Startbildschirm ------------------------------------------------------ */
+
+.q-setup { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+.q-setup__title { font-size: var(--fs-2xl); }
+.q-setup__lead  { margin: 0; max-width: 46ch; }
+
+.q-setup__grid { margin-top: var(--sp-1); }
+
+.q-switches {
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+.q-switches .checkline { min-height: 44px; }
+
+/* «Frühere Partner:innen» hängt sichtbar an der Auswahl darüber. */
+.q-switches .checkline--sub {
+  margin-left: var(--sp-4);
+  padding-left: var(--sp-3);
+  border-left: 1.5px solid var(--border);
+}
+.q-switches .checkline.is-disabled { color: var(--text-faint); cursor: default; }
+.q-switches .checkline.is-disabled input[type="checkbox"] { cursor: default; }
+
+.q-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  text-align: center;
+  background: var(--bg-sunken);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-md);
+}
+.q-preview__count {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--accent);
+  line-height: var(--lh-tight);
+}
+.q-preview__count.is-empty { color: var(--text-faint); }
+.q-preview__note { margin: 0; }
+
+/* --- Runde: Fortschritt --------------------------------------------------- */
+
+.q-page--round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+
+.q-progress { display: flex; flex-direction: column; gap: var(--sp-2); }
+.q-progress__top { display: flex; align-items: center; gap: var(--sp-2); }
+.q-progress__label {
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  color: var(--text-soft);
+}
+.q-attempt { flex: none; }
+
+.q-progress__bar {
+  height: 10px;
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.q-progress__fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--c-sun), var(--c-peach));
+  border-radius: var(--r-pill);
+  transition: width var(--dur-slow) var(--ease);
+}
+
+/* --- Runde: Kärtchen ------------------------------------------------------ */
+
+.q-stage { perspective: 1200px; display: flex; justify-content: center; }
+
+.q-card {
+  position: relative;
+  /* Handy: fast bildschirmbreit. Die dvh-Grenze hält Kärtchen und Antworten
+     auch auf flachen Fenstern gemeinsam im Blick. */
+  width: min(100%, 440px, 52dvh);
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-xl);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+}
+.q-card:focus-visible { outline-offset: 4px; }
+
+.q-card__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform var(--dur-slow) var(--ease);
+}
+.q-card.is-flipped .q-card__inner { transform: rotateY(180deg); }
+
+.q-card__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-md);
+  background: var(--bg-surface);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.q-card__face--back {
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+  text-align: center;
+  background: linear-gradient(160deg, var(--c-cream), var(--bg-sunken));
+  transform: rotateY(180deg);
+}
+
+.q-portrait {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: clamp(3rem, 18vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--c-white);
+  background-color: var(--bg-sunken);
+  background-repeat: no-repeat;
+  user-select: none;
+}
+.q-portrait--initials { background-color: var(--c-peach); }
+
+.q-back__name {
+  font-size: clamp(var(--fs-xl), 7vw, var(--fs-3xl));
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.q-back__rel  { font-size: var(--fs-sm); color: var(--text-soft); }
+.q-back__life { display: block; }
+
+.q-hint {
+  min-height: 1.4em;
+  text-align: center;
+}
+
+/* --- Runde: Antworten ----------------------------------------------------- */
+
+.q-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.q-actions.is-visible { opacity: 1; visibility: visible; transform: none; }
+
+.q-answer {
+  white-space: normal;
+  padding-inline: var(--sp-3);
+  text-align: center;
+}
+
+.q-abort-row { display: flex; justify-content: center; }
+
+/* --- Abschluss ------------------------------------------------------------ */
+
+.q-done { display: flex; flex-direction: column; gap: var(--sp-4); text-align: center; }
+.q-done__mark  { font-size: 52px; line-height: 1; }
+.q-done__title { font-size: var(--fs-2xl); }
+.q-done__lead  { margin: 0; }
+.q-done__sub   { margin-top: var(--sp-2); }
+.q-done__hint  { margin: 0; }
+.q-done__perfect {
+  margin: 0;
+  padding: var(--sp-4);
+  font-weight: 650;
+  color: var(--success);
+  background: var(--bg-sunken);
+  border-radius: var(--r-md);
+}
+
+.q-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+.q-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-2);
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+.q-stat__value { font-size: var(--fs-2xl); font-weight: 800; color: var(--accent); line-height: 1; }
+.q-stat__label { font-size: var(--fs-xs); color: var(--text-soft); line-height: var(--lh-tight); }
+
+.q-tricky { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.q-tricky__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--sp-2) var(--sp-3);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.q-tricky__item:hover  { transform: translateY(-1px); box-shadow: var(--sh-sm); }
+.q-tricky__item:active { transform: translateY(0); }
+
+.q-tricky__avatar { background-color: var(--c-peach); }
+.q-tricky__text   { display: flex; flex-direction: column; min-width: 0; }
+.q-tricky__name   { font-weight: 700; }
+.q-tricky__rel    { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-tricky__count  { flex: none; }
+
+.q-done__actions { justify-content: center; }
+.q-done__btn { flex: 1 1 200px; }
+
+/* --- Desktop -------------------------------------------------------------- */
+
+@media (min-width: 768px) {
+  .q-page--round { gap: var(--sp-5); }
+  .q-portrait { font-size: 5.5rem; }
+}
+
+/* Auf Touchgeräten helfen die Tastenkürzel nicht weiter. */
+@media (pointer: coarse) {
+  .q-hint { font-size: var(--fs-xs); }
+}
+
+/* --- Reduzierte Bewegung --------------------------------------------------
+   Kein 3D-Dreh, sondern ein schlichter Wechsel der Seiten. tokens.css setzt
+   die Übergangsdauern global auf ~0; hier fällt zusätzlich die Drehung weg. */
+@media (prefers-reduced-motion: reduce) {
+  .q-stage { perspective: none; }
+  .q-card__inner,
+  .q-card.is-flipped .q-card__inner { transform: none; }
+  .q-card__face { backface-visibility: visible; }
+  .q-card__face--back { transform: none; visibility: hidden; }
+  .q-card.is-flipped .q-card__face--front { visibility: hidden; }
+  .q-card.is-flipped .q-card__face--back  { visibility: visible; }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Stammbauminator",
+  "description": "Passwortgeschützter Familien-Stammbaum mit Fotoalbum und Personenmarkierungen.",
+  "icon": "🌳",
+  "route": "https://stammbaum.example.com",
+  "tags": ["Familie"],
+  "tier": "node"
+}

@@ -1,0 +1,40 @@
+# Abhaengigkeiten werden im Image frisch installiert
+node_modules
+
+# Persistente Daten gehoeren ins Volume, nicht ins Image
+data
+data/
+
+# Git & Tooling
+.git
+.gitignore
+.github
+.claude
+.vscode
+.idea
+
+# Lokale Konfiguration und Secrets
+.env
+.env.*
+!.env.example
+
+# Docker-Kram selbst
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# Scratchpad-/Temp-Reste
+scratchpad/
+tmp/
+*.tmp
+*.log
+npm-debug.log*
+
+# Dokumentation (README bleibt drin, damit `npm` nicht meckert)
+*.md
+!README.md
+
+# Betriebssystem-Krempel
+.DS_Store
+Thumbs.db

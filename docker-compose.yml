@@ -1,0 +1,26 @@
+services:
+  stammbaum:
+    build: .
+    container_name: stammbaum
+    restart: unless-stopped
+    volumes:
+      # Persistente Daten: stammbaum.db (+ WAL) und uploads/
+      - ./data:/app/data
+    environment:
+      PORT: "3000"
+      DATA_DIR: /app/data
+      # Cookies nur ueber HTTPS - der Zugriff laeuft ausschliesslich ueber einen
+      # Reverse Proxy mit TLS.
+      SECURE_COOKIES: "true"
+      # Greifen nur beim allerersten Start (Seed). Muessen in .env gesetzt sein.
+      INITIAL_FAMILY_PASSWORD: ${INITIAL_FAMILY_PASSWORD:?INITIAL_FAMILY_PASSWORD fehlt - bitte .env aus .env.example anlegen}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?INITIAL_ADMIN_PASSWORD fehlt - bitte .env aus .env.example anlegen}
+    networks:
+      - nginxproxymanager_default
+    # Bewusst KEIN ports:-Mapping. Der Reverse Proxy erreicht den Container
+    # ueber den Hostnamen `stammbaum` im gemeinsamen Docker-Netzwerk.
+    # Der Netzwerkname unten ist an die eigene Umgebung anzupassen.
+
+networks:
+  nginxproxymanager_default:
+    external: true

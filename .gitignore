@@ -1,0 +1,27 @@
+# Abhaengigkeiten
+node_modules/
+
+# Persistente Daten (SQLite-DB, WAL-Dateien, Uploads)
+data/
+
+# Secrets
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Betriebssystem-Krempel
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Maschinenlokale Werkzeug-Einstellungen (sammeln lokale Pfade)
+.claude/settings.local.json

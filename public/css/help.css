@@ -1,0 +1,68 @@
+/* Stammbauminator — Kurzanleitung (Modal)
+   Ruhig und gut lesbar: Der Text wird auch von Kindern und von Leuten gelesen,
+   die kleine Schrift nicht mögen. Darum etwas grösser als der Rest der App. */
+
+.help {
+  font-size: var(--fs-md);
+  line-height: 1.6;
+}
+
+.help__intro {
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--text);
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+
+.help__section + .help__section {
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-5);
+  border-top: 1.5px solid var(--border-soft);
+}
+
+.help__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-lg);
+}
+
+.help__icon {
+  font-size: 22px;
+  line-height: 1;
+  flex: none;
+}
+
+.help p { margin-bottom: var(--sp-2); }
+.help p:last-child { margin-bottom: 0; }
+
+.help__list {
+  margin: var(--sp-2) 0;
+  padding-left: var(--sp-5);
+}
+.help__list li { margin-bottom: var(--sp-2); }
+.help__list li:last-child { margin-bottom: 0; }
+
+.help__hint {
+  margin-top: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+  background: var(--bg-sunken);
+  border-left: 3px solid var(--c-sun);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.help__outro {
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
+  color: var(--text-soft);
+  text-align: center;
+  border-top: 1.5px solid var(--border-soft);
+}
+
+/* Der Fragezeichen-Knopf in der Kopfzeile */
+.app-header__help { font-size: var(--fs-lg); font-weight: 700; }

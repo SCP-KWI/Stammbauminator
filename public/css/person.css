@@ -1,0 +1,144 @@
+/* Stammbauminator — Personen-Detailpanel (js/person.js)
+   Nur Tokens aus tokens.css, keine Hex-Farben. Frueher per injectStyles()
+   zur Laufzeit eingehaengt — als eigene Datei ausgeliefert, damit die
+   Content-Security-Policy ohne 'unsafe-inline' fuer style-src auskommt. */
+/* Der Sticky-App-Header liegt in tokens.css über der Panel-Ebene (--z-header 50
+   vs. --z-panel 40) und würde den Kopfbereich des Panels verdecken. Panel und
+   Backdrop deshalb knapp über den Header heben — aber unter --z-modal (60),
+   damit Dialoge aus App.modal() weiterhin obenauf liegen. */
+.pp { outline: none; z-index: calc(var(--z-header) + 2); }
+.pp-backdrop { z-index: calc(var(--z-header) + 1); }
+.pp-grip { display: block; width: 44px; height: 5px; margin: var(--sp-2) auto 0;
+  background: var(--border); border-radius: var(--r-pill); }
+@media (min-width: 768px) { .pp-grip { display: none; } }
+
+.pp-head { flex: none; padding: var(--sp-2) var(--sp-4) var(--sp-4);
+  border-bottom: 1.5px solid var(--border-soft); background: var(--bg-sunken); }
+@media (min-width: 768px) { .pp-head { padding-top: var(--sp-4); } }
+.pp-head__bar { display: flex; align-items: center; gap: var(--sp-2); }
+.pp-head__spacer { display: block; width: 1px; height: 34px; }
+
+.pp-ident { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-2); }
+.pp-ident__text { min-width: 0; }
+.pp-name { font-size: var(--fs-xl); overflow-wrap: anywhere; }
+.pp-sub { margin-top: 2px; }
+.pp-pills { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }
+
+/* Grösser als .avatar--lg: ein Gesicht soll auch etwas hergeben. */
+.pp-avatar { width: 104px; height: 104px; font-size: var(--fs-2xl); }
+@media (max-width: 359px) { .pp-avatar { width: 88px; height: 88px; } }
+
+.pp-portrait { display: flex; flex-direction: column; gap: var(--sp-2);
+  margin-top: var(--sp-3); }
+.pp-portrait__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pp-portrait__status { margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.pp-portrait__status--error { color: var(--danger); font-weight: 650; }
+
+.pp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; padding: var(--sp-5) var(--sp-4) var(--sp-6); }
+
+.pp-section + .pp-section { margin-top: var(--sp-5);
+  padding-top: var(--sp-5); border-top: 1.5px solid var(--border-soft); }
+.pp-section__title { font-size: var(--fs-md); letter-spacing: .02em;
+  color: var(--text-soft); margin-bottom: var(--sp-3); }
+.pp-subtitle { font-size: var(--fs-sm); color: var(--text-faint);
+  margin: var(--sp-4) 0 var(--sp-2); font-weight: 650; }
+.pp-subtitle:first-of-type { margin-top: 0; }
+
+.pp-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pp-info { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.pp-info__icon { flex: none; width: 22px; text-align: center; line-height: 1.5; }
+.pp-info__text { display: flex; flex-direction: column; min-width: 0; }
+.pp-info__label { line-height: 1.3; }
+.pp-info__value { overflow-wrap: anywhere; }
+
+.pp-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.pp-person { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); width: 100%;
+  min-height: 52px; padding: var(--sp-2) var(--sp-3); text-align: left;
+  font: inherit; color: var(--text); background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft); border-radius: var(--r-md);
+  cursor: pointer; transition: background-color var(--dur) var(--ease),
+  border-color var(--dur) var(--ease), transform var(--dur-fast) var(--ease); }
+.pp-person:hover { background: var(--c-white); border-color: var(--border);
+  transform: translateX(2px); }
+.pp-person--static { cursor: default; }
+.pp-person--static:hover { transform: none; background: var(--bg-sunken); }
+.pp-person__text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 55%; }
+.pp-person__name { font-weight: 650; overflow-wrap: anywhere; }
+.pp-person__sub { line-height: 1.35; overflow-wrap: anywhere; }
+.pp-person__pills { display: flex; flex-wrap: wrap; gap: var(--sp-1);
+  flex: 0 1 auto; margin-left: auto; }
+
+.pp-childgroup + .pp-childgroup { margin-top: var(--sp-3); }
+
+.pp-photos { display: grid; gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+.pp-photo { padding: 0; border: 1.5px solid var(--border-soft); border-radius: var(--r-md);
+  background: var(--bg-sunken); overflow: hidden; cursor: pointer; aspect-ratio: 1;
+  box-shadow: var(--sh-sm); transition: transform var(--dur-fast) var(--ease); }
+.pp-photo:hover { transform: scale(1.04); }
+.pp-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Drei Knöpfe (Bearbeiten, Zu Kontakten hinzufügen, Person löschen) passen auf
+   375 px nicht nebeneinander. `.btn` bricht seinen Text nicht um (white-space:
+   nowrap), also muss der Fussbereich selbst umbrechen dürfen — sonst liefe er
+   über. `gap` gilt auch als Zeilenabstand. */
+.pp-foot { flex: none; display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  padding-bottom: max(var(--sp-3), env(safe-area-inset-bottom));
+  border-top: 1.5px solid var(--border-soft); background: var(--bg-sunken); }
+.pp-foot:empty { display: none; }
+/* Löschen bleibt rechts — auch wenn es allein in der zweiten Zeile steht. */
+.pp-foot__end { margin-left: auto; }
+
+.pp-form__actions { margin-top: var(--sp-2); }
+.pp-union { display: flex; flex-direction: column; gap: var(--sp-2);
+  padding: var(--sp-3); background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft); border-radius: var(--r-md); }
+.pp-union__name { font-weight: 650; }
+.pp-union__hint { margin: 0; line-height: 1.35; }
+.pp-union__status { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+/* Zweifach-Auswahl je Partnerschaft — Touch-Ziel min. 44 px hoch. */
+.pp-union__opt { min-height: 44px; padding: var(--sp-1) var(--sp-4);
+  font-weight: 650; color: var(--text-soft); background: var(--c-white);
+  border: 1.5px solid var(--border); border-radius: var(--r-pill);
+  transition: border-color var(--dur) var(--ease),
+  background-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+.pp-union__opt:hover { border-color: var(--c-ink-faint); }
+.pp-union__opt--on { color: var(--text); background: var(--bg-sunken);
+  border-color: var(--c-sage); }
+.pp-union__msg { margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.pp-union__msg--error { color: var(--danger); font-weight: 650; }
+
+.pp-warn { font-weight: 650; color: var(--danger); }
+.pp-namelist { margin: var(--sp-2) 0 0; padding-left: var(--sp-5);
+  color: var(--text-soft); font-size: var(--fs-sm);
+  max-height: 180px; overflow-y: auto; }
+.pp-namelist li { margin-bottom: 2px; overflow-wrap: anywhere; }
+
+/* Lösch-Dialog: Auswirkung zuerst, Bestätigung zuletzt. */
+.pp-del p { margin: 0; line-height: var(--lh-normal); }
+/* Mehr als eine betroffene Person — der Kasten soll nicht zu übersehen sein. */
+.pp-del__alarm { padding: var(--sp-3); font-weight: 650; color: var(--danger);
+  background: var(--bg-sunken); border: 1.5px solid var(--c-coral);
+  border-left-width: 5px; border-radius: var(--r-md); }
+.pp-del__adminhint { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm);
+  color: var(--text-soft); background: var(--bg-sunken);
+  border-left: 3px solid var(--c-sun); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.pp-del__counts { display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--sp-2); margin: var(--sp-1) 0; }
+.pp-del__count { display: grid; justify-items: center; text-align: center;
+  gap: 0; padding: var(--sp-3) var(--sp-2); background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft); border-radius: var(--r-md); }
+.pp-del__count strong { font-size: var(--fs-2xl); line-height: 1.1;
+  color: var(--danger); }
+.pp-del__count span { color: var(--text-soft); }
+/* Kein display:flex — sonst verschwindet das Aufklapp-Dreieck. Die 44 px
+   Touch-Höhe entstehen aus Zeilenhöhe plus Innenabstand. */
+.pp-del__names summary { min-height: 44px; padding: var(--sp-3) 0;
+  cursor: pointer; font-weight: 650; color: var(--text-soft); }
+.pp-del__names summary:hover { color: var(--text); }
+.pp-del__confirm { margin-top: var(--sp-2); }
+.pp-del__confirm input { min-height: 44px; }

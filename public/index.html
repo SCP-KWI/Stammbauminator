@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f7ecdb">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Stammbauminator</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/tree.css">
+  <link rel="stylesheet" href="css/person.css">
+  <link rel="stylesheet" href="css/photos.css">
+  <link rel="stylesheet" href="css/quiz.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/help.css">
+  <link rel="stylesheet" href="css/print.css">
+</head>
+<body>
+
+  <!-- Login-Gate: liegt über allem, bis eine gültige Session besteht -->
+  <div id="gate" hidden>
+    <div class="gate-card">
+      <div class="gate-card__mark" aria-hidden="true">🌳</div>
+      <h1 class="gate-card__title" id="gate-title">Stammbauminator</h1>
+      <p class="gate-card__text">Bitte das Familien-Passwort eingeben.</p>
+      <form id="gate-form" autocomplete="off">
+        <div class="field">
+          <label for="gate-password">Familien-Passwort</label>
+          <div class="pw-field">
+            <input type="password" id="gate-password" name="password"
+                   autocomplete="current-password" required
+                   aria-describedby="gate-error">
+            <button type="button" class="btn btn--ghost btn--icon btn--sm pw-field__eye"
+                    id="gate-password-eye"
+                    title="Passwort anzeigen" aria-label="Passwort anzeigen"
+                    aria-pressed="false">
+              <span aria-hidden="true">👁</span>
+            </button>
+          </div>
+          <p class="field__error" id="gate-error" role="alert" hidden></p>
+        </div>
+        <button type="submit" class="btn btn--primary btn--lg btn--block" id="gate-submit">
+          Reinschauen
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- App-Shell -->
+  <div id="app" hidden>
+    <header class="app-header">
+      <div class="app-header__brand">
+        <span class="app-header__mark" aria-hidden="true">🌳</span>
+        <div>
+          <div class="app-header__title" id="app-title">Stammbaum</div>
+          <div class="app-header__sub">Unsere Familie auf einen Blick</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <nav class="tabs" role="tablist" aria-label="Bereiche">
+        <button class="tab" role="tab" id="tabbtn-tree" data-tab="tree"
+                aria-controls="tab-tree" aria-selected="true">
+          <span aria-hidden="true">🌳</span><span class="tab__label">Stammbaum</span>
+        </button>
+        <button class="tab" role="tab" id="tabbtn-photos" data-tab="photos"
+                aria-controls="tab-photos" aria-selected="false">
+          <span aria-hidden="true">📸</span><span class="tab__label">Fotoalbum</span>
+        </button>
+        <button class="tab" role="tab" id="tabbtn-quiz" data-tab="quiz"
+                aria-controls="tab-quiz" aria-selected="false">
+          <span aria-hidden="true">🧠</span><span class="tab__label">Namen lernen</span>
+        </button>
+        <button class="tab" role="tab" id="tabbtn-admin" data-tab="admin"
+                aria-controls="tab-admin" aria-selected="false">
+          <span aria-hidden="true">🔑</span><span class="tab__label">Admin</span>
+        </button>
+      </nav>
+
+      <button class="btn btn--ghost btn--icon app-header__help" id="help-btn"
+              title="So funktioniert’s" aria-label="Anleitung öffnen">
+        <span aria-hidden="true">?</span>
+      </button>
+
+      <button class="btn btn--ghost btn--icon" id="logout-btn" title="Abmelden" aria-label="Abmelden">
+        <span aria-hidden="true">⎋</span>
+      </button>
+    </header>
+
+    <main class="app-main">
+      <section class="tabpanel" id="tab-tree"   role="tabpanel" aria-labelledby="tabbtn-tree"   data-active="true"></section>
+      <section class="tabpanel" id="tab-photos" role="tabpanel" aria-labelledby="tabbtn-photos"></section>
+      <section class="tabpanel" id="tab-quiz"   role="tabpanel" aria-labelledby="tabbtn-quiz"></section>
+      <section class="tabpanel" id="tab-admin"  role="tabpanel" aria-labelledby="tabbtn-admin"></section>
+    </main>
+
+    <footer class="app-footer">
+      <p>
+        Stammbauminator by
+        <a href="mailto:philip@schaffner.xyz">Philip Schaffner</a>,
+        frei verfügbar
+        <a href="https://github.com/SCP-KWI/Stammbauminator"
+           target="_blank" rel="noopener noreferrer">hier</a>
+        <span class="app-footer__sep" aria-hidden="true">·</span>
+        <span class="app-footer__license">GPL v3</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- Mountpoints für Overlays -->
+  <div id="person-panel"></div>
+  <div id="modals"></div>
+  <div id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/image.js"></script>
+  <script src="js/portrait.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/tree.js"></script>
+  <script src="js/person.js"></script>
+  <script src="js/photos.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/help.js"></script>
+  <script src="js/boot.js"></script>
+</body>
+</html>

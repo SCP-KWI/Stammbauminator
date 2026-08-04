@@ -1,0 +1,190 @@
+/* ==========================================================================
+   Stammbauminator — Druckansicht: der ganze Stammbaum auf eine A4-Seite quer.
+
+   Der Druckmodus hängt an der Klasse .is-printing am <body> (gesetzt von
+   js/tree.js) und nicht an @media print. Zwei Gründe: der Massstab muss vor
+   dem Drucken im fertigen Drucklayout gemessen werden, und so lässt sich das
+   Ergebnis auch am Bildschirm prüfen. @media print steuert nur das Blatt.
+
+   Nur Custom Properties aus tokens.css, keine eigenen Hex-Farben. Einzige
+   Ausnahme ist das reine Weiss des Papiers — dafür gibt es --c-white.
+   ========================================================================== */
+
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* Kein Seitenverlauf über das ganze Blatt */
+  body { background: var(--c-white); }
+}
+
+/* --------------------------------------------------------------------------
+   Blattmass
+   A4 quer = 297 × 210 mm. Bei 96 dpi sind das 1122 × 794 px; mit 10 mm Rand
+   ringsum bleiben 277 × 190 mm nutzbar, also 1046 × 718 px. Davon lassen wir
+   2 px stehen — bei einem punktgenauen Blatt genügt ein Rundungsfehler, und es
+   kommt eine zweite Seite dazu. Dieselben Zahlen stehen als PRINT_W / PRINT_H
+   in js/tree.js — beide müssen zusammenpassen.
+   -------------------------------------------------------------------------- */
+
+body.is-printing {
+  --print-w: 1044px;
+  --print-h: 716px;
+  /* Muss mit PRINT_TITLE_H in js/tree.js übereinstimmen — die Höhe wird dort
+     von der Blatthöhe abgezogen, damit der Baum nicht auf Seite zwei rutscht. */
+  --print-title-h: 34px;
+  background: var(--c-white);
+}
+
+/* Titel über dem Ausdruck. Am Bildschirm unsichtbar: dort steht er in der
+   Kopfzeile, die auf dem Papier ausgeblendet ist. */
+.tree-print-title { display: none; }
+
+body.is-printing .tree-print-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: var(--print-w);
+  height: var(--print-title-h);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--text);
+}
+
+/* --------------------------------------------------------------------------
+   Alles ausblenden, was nicht zum Baum gehört
+   -------------------------------------------------------------------------- */
+
+body.is-printing #gate,
+body.is-printing #person-panel,
+body.is-printing #modals,
+body.is-printing #toasts,
+body.is-printing .app-header,
+body.is-printing .app-footer,
+body.is-printing .tree-toolbar,
+body.is-printing .tree-controls,
+body.is-printing .tree-state {
+  display: none !important;
+}
+
+/* Herzen und Fläschchen sind Bedienelemente — auf Papier haben sie nichts
+   verloren, und der gewonnene Platz kommt dem Massstab zugute. */
+body.is-printing .btn-add,
+body.is-printing .tree-partner-slot,
+body.is-printing .tree-union__kid,
+body.is-printing .tree-add {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Die Ansichtsfläche wird zum Blatt
+   -------------------------------------------------------------------------- */
+
+body.is-printing #app { min-height: 0; }
+body.is-printing .app-main { flex: none; }
+
+body.is-printing .tree-view {
+  height: auto;
+  min-height: 0;
+
+  /* Kompakter setzen: enger, schmaler, kleiner — dafür bleibt der Massstab
+     grösser und die Namen bleiben auf dem Papier lesbar. Die Kartenbreiten
+     passen zum Schriftgrad weiter unten: zu enge Karten schnitten die Namen ab. */
+  --tree-card-min: 88px;
+  --tree-card-max: 160px;
+  --tree-drop: 22px;
+  --tree-gap: var(--sp-2);
+  --tree-branch-gap: var(--sp-3);
+  --tree-stack-gap: 2px;
+  --tree-mark-pad: 1px;
+}
+
+body.is-printing .tree-viewport {
+  width: var(--print-w);
+  height: var(--print-h);
+  overflow: hidden;
+  background: var(--c-white);
+  cursor: default;
+}
+
+body.is-printing .tree-canvas { will-change: auto; }
+body.is-printing .tree-root { padding: 0; }
+
+/* Flächen und Rahmen sollen mit aufs Papier, sonst bleiben von den Karten nur
+   Textfetzen übrig und die Partnerschaftspillen verlieren ihre Bedeutung. */
+body.is-printing .tree-viewport,
+body.is-printing .tree-viewport * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* --------------------------------------------------------------------------
+   Verschachtelte Geschwister
+   Bei einem breiten, flachen Baum verteilt js/tree.js die Geschwister einer
+   Reihe auf mehrere Spuren und setzt dazu marginTop/marginLeft an den Knoten.
+   Der Abstand zwischen den Geschwistergruppen wächst dabei: sonst wäre nach
+   dem Verschachteln nicht mehr zu sehen, welches Kind zu welchem Paar gehört.
+   -------------------------------------------------------------------------- */
+
+body.is-print-lanes .tree-view {
+  --tree-branch-gap: var(--sp-5);
+}
+
+/* --------------------------------------------------------------------------
+   Karten: kleiner Satz, engere Innenabstände
+   Die 12 px der Namen stehen als PRINT_NAME_PX in js/tree.js und sind die
+   Grundlage der Lesbarkeitsprüfung vor dem Drucken. Die Verschachtelung nutzt
+   die freie Blatthöhe und hebt den Massstab so weit, dass dieser Grad trägt.
+   -------------------------------------------------------------------------- */
+
+body.is-printing .tree-card {
+  gap: var(--sp-1);
+  min-height: 0;
+  padding: 3px var(--sp-2);
+  font-size: 12px;
+  border-width: 1px;
+  box-shadow: none;
+}
+body.is-printing .tree-card__name { line-height: 1.15; }
+body.is-printing .tree-card__meta { font-size: 10px; line-height: 1.15; }
+body.is-printing .tree-card--ghost .tree-card__name { font-size: 10px; }
+
+/* Die Initialen wiederholen nur den Namen daneben — auf Papier ist der Platz
+   besser im Massstab aufgehoben (rund 40 px je Karte). */
+body.is-printing .tree-card .avatar { display: none; }
+
+/* Frühere Partnerschaften bleiben gedämpft, aber druckbar */
+body.is-printing .tree-card--past { opacity: .75; }
+
+/* Statuspillen: nur noch das Zeichen (♥ / ⤫). Der Text «aktuell»/«früher»
+   kostet je Partnerschaft rund 40 px Breite; die gestrichelte Linie und das
+   Zeichen unterscheiden die beiden Fälle weiterhin. */
+body.is-printing .tree-mark { padding: 0 1px; }
+body.is-printing .tree-mark__btn { min-width: 0; min-height: 0; padding: 0; }
+body.is-printing .tree-mark__btn .pill { padding: 1px 3px; border-width: 1px; }
+body.is-printing .tree-mark__text { display: none; }
+body.is-printing .tree-mark__glyph { font-size: 9px; }
+
+/* --------------------------------------------------------------------------
+   Verbindungslinien
+   Das SVG-Overlay liegt im Canvas und wird mitskaliert; bei kleinem Massstab
+   werden die Striche sonst zu dünn fürs Papier.
+   -------------------------------------------------------------------------- */
+
+body.is-printing .tree-line { stroke-width: 4; }
+body.is-printing .tree-line--partner { stroke-width: 5; }
+body.is-printing .tree-line--past { opacity: .8; }
+
+/* Eingefärbte Bündel (Kinder aus mehr als einer Partnerschaft, siehe
+   css/tree.css): auf Papier gilt dasselbe wie am Bildschirm — volle Farbe
+   wegen des Kontrasts, eine frühere Partnerschaft bleibt über den dünneren
+   Strich gedämpft. */
+body.is-printing .tree-line--descent.tree-line--tinted { opacity: 1; }
+body.is-printing .tree-line--past.tree-line--tinted { stroke-width: 3; }

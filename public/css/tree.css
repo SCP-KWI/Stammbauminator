@@ -1,0 +1,599 @@
+/* ==========================================================================
+   Stammbauminator — Stammbaum-Ansicht
+   Nur Custom Properties aus tokens.css, keine eigenen Hex-Farben.
+   ========================================================================== */
+
+.tree-view {
+  --tree-card-min: 108px;
+  --tree-card-max: 168px;
+  --tree-drop: 44px;
+  --tree-gap: var(--sp-4);
+  --tree-branch-gap: var(--sp-5);
+  /* Abstand zwischen den gestapelten Partnerschaften eines Knotens */
+  --tree-stack-gap: var(--sp-1);
+  /* Waagrechter Luftraum links und rechts der Statuspille */
+  --tree-mark-pad: var(--sp-2);
+
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 70px);
+  min-height: 420px;
+}
+
+@media (min-width: 768px) {
+  .tree-view {
+    --tree-card-min: 132px;
+    --tree-card-max: 200px;
+    --tree-drop: 56px;
+    --tree-gap: var(--sp-5);
+    --tree-branch-gap: var(--sp-7);
+    --tree-stack-gap: var(--sp-2);
+    --tree-mark-pad: var(--sp-3);
+    height: calc(100dvh - 74px);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Werkzeugleiste
+   -------------------------------------------------------------------------- */
+
+.tree-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1.5px solid var(--border-soft);
+  background: var(--bg-sunken);
+}
+
+@media (min-width: 768px) {
+  .tree-toolbar { padding: var(--sp-3) var(--sp-6); }
+}
+
+.tree-search {
+  position: relative;
+  flex: 1 1 200px;
+  max-width: 340px;
+}
+.tree-search__icon {
+  position: absolute;
+  left: var(--sp-3);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--fs-sm);
+  pointer-events: none;
+  opacity: .65;
+}
+.tree-search__input { padding-left: var(--sp-7); }
+.tree-search__status { flex: none; }
+
+/* Umschalter «Person hinzufügen». Sitzt am rechten Rand der Werkzeugleiste;
+   auf dem Handy rutscht er in die zweite Zeile und bleibt dort linksbündig. */
+.tree-addmode { flex: none; }
+@media (min-width: 768px) {
+  .tree-addmode { margin-left: auto; }
+}
+.tree-addmode__glyph { font-size: var(--fs-sm); line-height: 1; }
+
+/* Eingeschaltet: Minze wie die Fläschchen. Die Farbe ist nur die Zugabe — den
+   Zustand tragen aria-pressed und die gewechselte Beschriftung. */
+.tree-addmode[aria-pressed="true"] {
+  --btn-bg: var(--c-mint);
+  --btn-fg: var(--c-ink);
+  --btn-border: var(--c-sage);
+}
+
+.tree-mark__past {
+  border-style: dashed;
+  color: var(--text-faint);
+}
+
+/* --------------------------------------------------------------------------
+   Modus «Person hinzufügen»
+
+   Herzen und Fläschchen stehen neben fast jeder Karte — beim blossen
+   Anschauen macht das den Baum unruhig. Sie erscheinen darum erst, wenn die
+   Klasse .is-adding gesetzt ist (js/tree.js, Knopf in der Werkzeugleiste).
+
+   visibility statt display: an den echten Daten gemessen fiele der Baum mit
+   display:none von 2637 × 461 px auf 2140 × 409 px zusammen — jedes Umschalten
+   liesse ihn also um rund 500 px springen. So bleibt der Platz reserviert und
+   das Layout in beiden Zuständen dasselbe. Nebenbei nimmt visibility:hidden
+   die Knöpfe aus der Tabulator-Reihenfolge, der Fokus landet also nie auf
+   etwas Unsichtbarem.
+
+   Im Druck bleiben sie in jedem Fall weg — css/print.css setzt display:none
+   mit !important, unabhängig vom Modus.
+   -------------------------------------------------------------------------- */
+
+.tree-partner-slot,
+.tree-union__kid,
+.tree-add { visibility: hidden; }
+
+.tree-view.is-adding .tree-partner-slot,
+.tree-view.is-adding .tree-union__kid,
+.tree-view.is-adding .tree-add { visibility: visible; }
+
+/* --------------------------------------------------------------------------
+   Ansichtsfläche mit Pan & Zoom
+   -------------------------------------------------------------------------- */
+
+.tree-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  overscroll-behavior: contain;
+}
+.tree-viewport.is-grabbing { cursor: grabbing; }
+
+.tree-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.tree-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tree-root {
+  position: relative;
+  z-index: 1;
+  padding: var(--sp-5) var(--sp-6);
+}
+
+.tree-line {
+  fill: none;
+  stroke: var(--c-ink-faint);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tree-line--partner { stroke: var(--c-sage); stroke-width: 3; }
+/* Frühere Partnerschaft: durchgezogen wie alle Linien, nur gedämpft.
+   Gestrichelt sah im Baum unruhig aus. Unterscheidbar bleibt sie über die
+   Pille («⤫ früher» statt «♥ aktuell») und die blassere Karte — also weiterhin
+   nicht allein über Farbe. */
+.tree-line--past {
+  stroke: var(--c-ink-faint);
+  opacity: .6;
+}
+
+/* Kinder aus mehr als einer Partnerschaft: dort bekommt jedes Linienbündel
+   eine eigene Farbe, sonst ist an einer Kreuzung nicht mehr zu sehen, welches
+   Kind zu welcher Partnerschaft gehört. Welche Klasse eine Partnerschaft
+   bekommt, rechnet js/tree.js aus der Union-ID aus — die Zuordnung bleibt
+   darum über Neuzeichnen, Zoom und Neuladen dieselbe.
+
+   Nur diese drei Töne: sie halten sowohl auf dem Sand-Hintergrund (2,96 : 1
+   bis 3,57 : 1) als auch auf weissem Papier (3,46 : 1 bis 4,17 : 1) genug
+   Kontrast — mehr als die gewöhnliche Linienfarbe --c-ink-faint (2,31 : 1
+   bzw. 2,70 : 1). Helle Tokens wie --c-sun-deep (2,02 : 1 auf Weiss) oder
+   --c-lavender (2,47 : 1) schaffen das nicht und bleiben aussen vor. */
+.tree-line--tinted.tree-line--tint0 { stroke: var(--c-sky-deep); }
+.tree-line--tinted.tree-line--tint1 { stroke: var(--c-coral-deep); }
+.tree-line--tinted.tree-line--tint2 { stroke: var(--c-sage); }
+
+/* Eingefärbte Bündel werden nicht über die Deckkraft gedämpft — bei .6 bliebe
+   von den 3 : 1 nicht genug übrig. Eine frühere Partnerschaft bleibt trotzdem
+   zurückhaltender: dünnerer Strich. Die Aussage selbst tragen ohnehin die
+   Pille («⤫ früher») und die blassere Karte, nie die Farbe allein. */
+.tree-line--descent.tree-line--tinted { opacity: 1; }
+.tree-line--past.tree-line--tinted { stroke-width: 2; }
+
+/* Lade-/Leerzustand liegt über der Fläche, wird nicht mitskaliert */
+.tree-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Steuerleiste (auch mobil erreichbar)
+   -------------------------------------------------------------------------- */
+
+.tree-controls {
+  position: absolute;
+  right: var(--sp-3);
+  bottom: var(--sp-3);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-md);
+}
+.tree-controls__icon { font-size: var(--fs-md); line-height: 1; }
+
+@media (max-width: 767px) {
+  .tree-controls {
+    right: var(--sp-2);
+    bottom: var(--sp-2);
+    flex-direction: row;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Knoten & Verzweigungen
+   -------------------------------------------------------------------------- */
+
+.tree-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+}
+
+/* Raster eines Knotens — Spalten:
+   1 Partnerkarten links · 2 Statuspillen links · 3 Personenkarte ·
+   4 Statuspillen rechts · 5 Partnerkarten rechts.
+   Jede Partnerschaft belegt eine Zeile; die unterste liegt auf Höhe der
+   Personenkarte, darunter folgt die Zeile mit dem "+".
+   Kein column-gap: leere Seiten sollen keinen Platz beanspruchen — der
+   waagrechte Abstand kommt aus dem Innenabstand der Pillen bzw. "+"-Felder. */
+.tree-node__top {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto;
+  column-gap: 0;
+  row-gap: var(--tree-stack-gap);
+  align-items: center;
+  justify-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.tree-node__person { grid-column: 3; }
+
+/* Zelle einer Partnerschaft: Partnerkarte (+ ggf. "+ Kind" bei
+   hochgeschobenen). Die inneren Kanten aller Karten einer Seite liegen
+   dadurch übereinander — die Verbindungslinien treffen sich auf einer
+   gemeinsamen Senkrechten. */
+.tree-union {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+.tree-union--left  { grid-column: 1; justify-self: end; }
+.tree-union--right { grid-column: 5; justify-self: start; }
+
+/* "+ Kind" bei einer hochgeschobenen Partnerschaft — dezent, 44-px-Trefferfläche */
+.tree-union__kid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  flex: none;
+  opacity: .32;
+  transition: opacity var(--dur) var(--ease);
+}
+.tree-union__kid:hover,
+.tree-union__kid:focus-within { opacity: 1; }
+.tree-node__top:hover .tree-union__kid { opacity: .85; }
+
+.tree-branches {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--tree-branch-gap);
+}
+
+.tree-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+}
+.tree-branch__drop { height: var(--tree-drop); flex: none; }
+
+.tree-kids {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--tree-gap);
+}
+
+.tree-add {
+  display: flex;
+  align-items: flex-start;
+  flex: none;
+  padding-top: 14px;
+}
+
+/* Slot für "+ Partner:in" — dezent, bis man ihn ansteuert.
+   Ohne Partnerschaft steht er neben der Personenkarte (Spalten 1–2 bzw. 4–5),
+   mit Stapel eine Zeile tiefer unter den Partnerkarten. */
+.tree-partner-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 var(--tree-mark-pad);
+  flex: none;
+  /* Zurückhaltend, aber nicht mehr so blass wie zur Zeit des schlichten "+":
+     ein Sinnbild muss auch im Ruhezustand erkennbar bleiben. */
+  opacity: .55;
+  transition: opacity var(--dur) var(--ease);
+}
+.tree-partner-slot:hover,
+.tree-partner-slot:focus-within { opacity: 1; }
+.tree-node__top:hover .tree-partner-slot { opacity: .85; }
+
+.tree-partner-slot--left  { grid-column: 1 / 3; justify-self: end; }
+.tree-partner-slot--right { grid-column: 4 / 6; justify-self: start; }
+.tree-partner-slot--stacked.tree-partner-slot--left  { grid-column: 1; }
+.tree-partner-slot--stacked.tree-partner-slot--right { grid-column: 5; }
+
+/* --------------------------------------------------------------------------
+   Personenkarten
+   -------------------------------------------------------------------------- */
+
+.tree-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: var(--tree-card-min);
+  max-width: var(--tree-card-max);
+  min-height: 52px;
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  color: var(--text);
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+  cursor: pointer;
+  flex: none;
+  transition: transform var(--dur-fast) var(--ease),
+              box-shadow var(--dur) var(--ease),
+              border-color var(--dur) var(--ease);
+}
+button.tree-card:hover { transform: translateY(-1px); box-shadow: var(--sh-md); }
+button.tree-card:active { transform: translateY(0); }
+
+.tree-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.tree-card__name {
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.tree-card__meta {
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.tree-card__cross { margin-right: 3px; }
+
+/* Eingeheiratete Partner:innen — andere Fläche, blauer Rand */
+.tree-card--partner {
+  background: var(--bg-sunken);
+  border-color: var(--c-sky);
+}
+.tree-card--ghost {
+  cursor: default;
+  border-style: dashed;
+  box-shadow: none;
+  align-items: center;
+  min-height: 52px;
+}
+.tree-card--ghost .tree-card__name { font-weight: 600; font-size: var(--fs-xs); }
+
+/* Frühere Partnerschaft: gedämpft (zusätzlich zur gestrichelten Linie) */
+.tree-card--past { opacity: .58; border-style: dashed; }
+
+/* Auf dem Handy darf der Stapel kompakter sein — drei, vier Partnerschaften
+   machen den Knoten sonst so hoch, dass vom Baum kaum etwas übrig bleibt. */
+@media (max-width: 767px) {
+  .tree-union--stacked .tree-card {
+    min-height: 40px;
+    padding: var(--sp-1) var(--sp-2);
+  }
+  .tree-union--stacked .avatar--sm { width: 26px; height: 26px; }
+}
+
+.tree-card--deceased { border-color: var(--border); }
+.tree-card--deceased .tree-card__meta { color: var(--text-faint); }
+
+/* Suchtreffer */
+.tree-card--match {
+  border-color: var(--c-sun-deep);
+  box-shadow: var(--sh-focus);
+}
+
+/* Kurzzeitige Hervorhebung durch focusPerson() */
+.tree-card--focus {
+  border-color: var(--c-coral);
+  outline: 3px solid var(--c-coral);
+  outline-offset: 3px;
+  box-shadow: var(--sh-md);
+  animation: tree-pulse 900ms var(--ease) 2;
+}
+@keyframes tree-pulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2px) scale(1.04); }
+}
+
+/* --------------------------------------------------------------------------
+   Union-Markierung zwischen Person und Partner:in
+   -------------------------------------------------------------------------- */
+
+.tree-mark {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0 var(--tree-mark-pad);
+}
+.tree-mark--left  { grid-column: 2; }
+.tree-mark--right { grid-column: 4; }
+
+/* Knopf ist die Trefferfläche (44 px), die Pille darin bleibt klein */
+.tree-mark__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--sp-1);
+  font: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.tree-mark__btn .pill {
+  position: relative;
+  z-index: 1;
+  padding: 2px var(--sp-2);
+  font-size: var(--fs-xs);
+  transition: box-shadow var(--dur) var(--ease),
+              transform var(--dur-fast) var(--ease);
+}
+.tree-mark__btn:hover .pill,
+.tree-mark__btn[aria-expanded="true"] .pill {
+  box-shadow: var(--sh-md);
+  transform: translateY(-1px);
+}
+.tree-mark__btn:active .pill { transform: translateY(0); }
+.tree-mark__glyph { font-size: var(--fs-xs); line-height: 1; }
+.tree-mark__text { display: none; }
+@media (min-width: 768px) { .tree-mark__text { display: inline; } }
+
+/* --------------------------------------------------------------------------
+   Statusauswahl an der Pille
+   -------------------------------------------------------------------------- */
+
+.tree-unionmenu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+}
+.tree-unionmenu-backdrop--dim {
+  background: rgba(58, 50, 48, .42);
+  animation: fade var(--dur) var(--ease);
+}
+
+.tree-unionmenu {
+  position: fixed;
+  z-index: calc(var(--z-modal) + 1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: min(300px, calc(100vw - var(--sp-5)));
+  padding: var(--sp-4);
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-lg);
+  animation: pop var(--dur) var(--ease);
+}
+.tree-unionmenu--sheet {
+  left: var(--sp-3);
+  right: var(--sp-3);
+  bottom: var(--sp-3);
+  top: auto;
+  width: auto;
+  border-radius: var(--r-xl);
+  animation: sheet-up var(--dur-slow) var(--ease);
+}
+
+.tree-unionmenu__title {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  color: var(--text-soft);
+}
+
+.tree-unionmenu__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.tree-unionmenu__option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  text-align: left;
+  color: var(--text);
+  background: var(--c-white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
+}
+.tree-unionmenu__option:hover:not(:disabled) { border-color: var(--c-ink-faint); }
+.tree-unionmenu__option:disabled { opacity: .5; cursor: not-allowed; }
+.tree-unionmenu__option.is-active {
+  background: var(--bg-sunken);
+  border-color: var(--c-sage);
+}
+.tree-unionmenu__label { flex: 1 1 auto; }
+.tree-unionmenu__glyph {
+  flex: none;
+  width: 1.25em;
+  font-size: var(--fs-sm);
+  line-height: 1;
+  text-align: center;
+  color: var(--text-soft);
+}
+.tree-unionmenu__check { flex: none; color: var(--success); font-weight: 700; }
+
+.tree-unionmenu__note > label { font-size: var(--fs-xs); }
+.tree-unionmenu__note input { font-size: var(--fs-sm); }
+.tree-unionmenu__save { align-self: flex-end; }
+.tree-unionmenu__error { margin: 0; }
+
+/* --------------------------------------------------------------------------
+   Dialoge
+   -------------------------------------------------------------------------- */
+
+.tree-form__hint {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+.tree-form__relation {
+  padding: var(--sp-3);
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
