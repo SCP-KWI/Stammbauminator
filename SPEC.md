@@ -487,7 +487,7 @@ Store.data                       // { rootPersonId, persons, unions }
 Store.person(id)                 // → Person | undefined
 Store.union(id)                  // → Union | undefined
 Store.unionsOf(personId)         // → Union[] aller Seiten, je Seite oben→unten
-Store.childrenOf(unionId)        // → Person[] (nach sortOrder, dann Geburtsdatum)
+Store.childrenOf(unionId)        // → Person[] (nach Alter; ohne Datum alphabetisch hinten)
 Store.bloodlinePersons()         // → Person[] (isPartner === false)
 Store.allPersons()               // → Person[] (alle, alphabetisch)
 Store.displayName(person)        // → "Anna Muster"

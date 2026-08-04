@@ -125,7 +125,8 @@
         : byPerson.get(Number(union.personId));
     },
 
-    /** Kinder einer Union — nach sortOrder, dann Geburtsdatum, dann Vorname. */
+    /** Kinder einer Union — nach Alter, Kinder ohne Geburtsdatum alphabetisch
+        hinten dran (siehe compareChildren). */
     childrenOf(unionId) {
       const list = childrenByUnion.get(Number(unionId)) || [];
       return list.slice().sort(compareChildren);
@@ -332,12 +333,27 @@
     return m ? m[1] : '';
   }
 
+  /**
+   * Geschwister von links nach rechts: das älteste zuerst. Wer kein
+   * Geburtsdatum hat, hängt hinten dran, dort alphabetisch.
+   *
+   * Teilangaben werden als ISO-Präfix verglichen — «1975» steht damit vor
+   * «1975-04-02». Wer nur das Jahr kennt, landet also am Jahresanfang; das
+   * ist die einzige Annahme, die ohne Zusatzwissen auskommt.
+   *
+   * `sortOrder` ist nur noch der letzte Stichentscheid. Er wird beim Anlegen
+   * fortlaufend vergeben und war deshalb bei zwei Geschwistern immer
+   * verschieden — womit das Geburtsdatum nie zum Zug kam und die Kinder in
+   * der Reihenfolge ihrer Erfassung standen.
+   */
   function compareChildren(a, b) {
-    if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
-    const ay = a.birthDate || '9999';
-    const by = b.birthDate || '9999';
-    if (ay !== by) return ay < by ? -1 : 1;
-    return Store.displayName(a).localeCompare(Store.displayName(b), 'de-CH');
+    const ad = String(a.birthDate || '').trim();
+    const bd = String(b.birthDate || '').trim();
+    if (Boolean(ad) !== Boolean(bd)) return ad ? -1 : 1;
+    if (ad && ad !== bd) return ad < bd ? -1 : 1;
+    const nachName = Store.displayName(a).localeCompare(Store.displayName(b), 'de-CH');
+    if (nachName !== 0) return nachName;
+    return (a.sortOrder || 0) - (b.sortOrder || 0);
   }
 
   window.Store = Store;

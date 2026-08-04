@@ -434,8 +434,9 @@ router.patch('/persons/:id', (req, res) => {
       values.push(fields[f.key]);
     }
   }
-  // Zusatz zur SPEC: sortOrder ist per PATCH aenderbar, damit die Reihenfolge
-  // der Geschwister im Frontend anpassbar bleibt.
+  // Zusatz zur SPEC: sortOrder ist per PATCH aenderbar. Die Geschwister
+  // ordnen sich im Frontend nach dem Geburtsdatum (Store.compareChildren);
+  // sortOrder entscheidet nur noch, wenn Datum UND Name gleich sind.
   if (Object.prototype.hasOwnProperty.call(req.body || {}, 'sortOrder')) {
     const n = Number(req.body.sortOrder);
     if (!Number.isFinite(n)) {
