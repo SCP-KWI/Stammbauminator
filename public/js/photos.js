@@ -8,7 +8,6 @@
   // --- Konstanten -----------------------------------------------------------
 
   const DRAG_THRESHOLD = 6;      // px, darunter gilt es als Klick
-  const LONG_PRESS_MS  = 520;    // Touch-Langdruck öffnet das Marker-Menü
   const HIGHLIGHT_MS   = 2600;   // Dauer der Hervorhebung via openPhoto()
   const SOLO_ECHO_MS   = 400;    // Nachhall beim Umschalten, siehe togglePersonFocus
   const STAGE_MARGIN   = 10;     // px Luft rund um das Bild
@@ -37,6 +36,10 @@
                        'Marker lassen sich verschieben.' + HINT_ZOOM;
   const HINT_HIDDEN  = 'Markierungen sind ausgeblendet — fahre über eine Stelle ' +
                        'im Bild, um sie zu sehen. Verschieben geht so nicht; ' +
+                       'Tippen ins Bild markiert weiterhin jemanden.' + HINT_ZOOM;
+  const HINT_EDIT    = 'Bearbeiten ist an: Markierungen lassen sich ziehen und ' +
+                       'mit ✕ entfernen. Ein Tipp auf eine Markierung öffnet die ' +
+                       'Person erst wieder, wenn du das Bearbeiten beendest. ' +
                        'Tippen ins Bild markiert weiterhin jemanden.' + HINT_ZOOM;
 
   // --- Zustand --------------------------------------------------------------
@@ -320,7 +323,16 @@
     namesBtn.type = 'button';
     namesBtn.addEventListener('click', toggleNames);
 
-    bar.append(closeBtn, meta, el('span', 'spacer'), counterEl, namesBtn);
+    // Bearbeiten-Modus: Aus bleibt der Tipp auf eine Markierung das Oeffnen der
+    // Person — die haeufigste Handlung, ein Tipp. An werden alle Markierungen
+    // beweglich und zeigen ihr ✕. Bewusst ein sichtbarer Schalter statt Hover
+    // oder Langdruck: Hover gibt es auf Touch nicht, und einen Langdruck findet
+    // niemand von selbst.
+    const editBtn = el('button', 'btn btn--secondary btn--sm pa-bar__edit');
+    editBtn.type = 'button';
+    editBtn.addEventListener('click', toggleEditing);
+
+    bar.append(closeBtn, meta, el('span', 'spacer'), counterEl, editBtn, namesBtn);
 
     // Bühne
     const stage = el('div', 'pa-stage');
@@ -356,7 +368,7 @@
     root.append(bar, stage, foot);
 
     viewer = {
-      root, bar, titleEl, dateEl, counterEl, namesBtn,
+      root, bar, titleEl, dateEl, counterEl, namesBtn, editBtn,
       stage, frame, img, prevBtn, nextBtn, people, hint,
       zoomWrap, zoomIn, zoomOut, zoomReset, zoomLevel,
       index: 0, photoId: null, ratio: 3 / 2,
@@ -369,11 +381,10 @@
       // Zoom: fitW/fitH = eingepasste Grösse (Stufe 1), zoom = Faktor darauf,
       // panX/panY = Verschiebung des Rahmens in px (nur translate, nie scale).
       fitW: 0, fitH: 0, zoom: 1, maxZoom: 1, panX: 0, panY: 0,
-      // Markierungen sind grundsätzlich fixiert; hier stehen die Tag-IDs, die
-      // gerade zum Verschieben freigegeben sind. Bewusst nur in der Ansicht und
-      // nicht in der Datenbank: Das ist ein Schutz vor dem Verrutschen, kein
-      // Datenfeld — nach dem Neuladen ist wieder alles fixiert.
-      unlocked: new Set(),
+      // Bearbeiten-Modus. Bewusst nur in der Ansicht und nicht in der
+      // Datenbank: Das ist ein Schutz vor dem Verrutschen, kein Datenfeld —
+      // nach dem Schliessen ist wieder alles fixiert.
+      editing: false,
       pointers: new Map(), pan: null, pinch: null, lastClick: null
     };
 
@@ -408,7 +419,12 @@
       viewer.ro = new ResizeObserver(() => layoutFrame());
       viewer.ro.observe(stage);
     }
-    viewer.resizeHandler = () => layoutFrame();
+    viewer.resizeHandler = () => {
+      layoutFrame();
+      // Beim Drehen wechselt die Leiste zwischen Lang- und Kurzform.
+      updateNamesButton();
+      updateEditButton();
+    };
     window.addEventListener('resize', viewer.resizeHandler);
     window.addEventListener('orientationchange', viewer.resizeHandler);
 
@@ -502,6 +518,7 @@
     viewer.prevBtn.hidden = !many;
     viewer.nextBtn.hidden = !many;
     updateNamesButton();
+    updateEditButton();
 
     renderMarkers();
     renderPeopleList();
@@ -510,26 +527,86 @@
     applySolo();
   }
 
+  /**
+   * Auf einem Handy stehen jetzt zwei Knoepfe neben Titel und Datum — die
+   * langen Beschriftungen passen dort nicht mehr. Bewusst ueber matchMedia
+   * statt zwei `span` mit CSS-Umschaltung: die Knoepfe tragen ohnehin schon
+   * `aria-pressed`, und ein zweites verstecktes Label liest der Screenreader
+   * sonst mit vor.
+   */
+  function schmaleLeiste() {
+    return Boolean(window.matchMedia && window.matchMedia('(max-width: 639px)').matches);
+  }
+
   function updateNamesButton() {
     if (!viewer) return;
     // Der Knopf schaltet die ganze Markierungsebene (Punkte und Namensschilder),
     // darum «Markierungen» statt «Namen».
+    const kurz = schmaleLeiste();
     viewer.namesBtn.textContent = state.showNames
+      ? (kurz ? 'Ausblenden' : 'Markierungen ausblenden')
+      : (kurz ? 'Einblenden' : 'Markierungen einblenden');
+    // Der Kurztext allein sagt nicht, worum es geht — der Titel schon.
+    viewer.namesBtn.title = state.showNames
       ? 'Markierungen ausblenden'
       : 'Markierungen einblenden';
     viewer.namesBtn.setAttribute('aria-pressed', String(state.showNames));
     viewer.frame.classList.toggle('pa-frame--no-names', !state.showNames);
-    viewer.hint.textContent = state.showNames
-      ? HINT_DEFAULT
-      : HINT_HIDDEN;
+    // Im Bearbeiten-Modus gehört der Hinweis updateEditButton().
+    if (!viewer.editing) {
+      viewer.hint.textContent = state.showNames ? HINT_DEFAULT : HINT_HIDDEN;
+    }
   }
 
   function toggleNames() {
     // Der Knopf ist eine Aussage über die ganze Ebene — eine laufende
     // Einzel-Hervorhebung endet damit, sonst überlagern sich zwei Zustände.
     clearSolo();
+    // Ausblenden beendet auch das Bearbeiten: ✕-Knöpfe an unsichtbaren
+    // Markierungen wären nur verwirrend.
+    if (state.showNames) setEditing(false);
     state.showNames = !state.showNames;
     updateNamesButton();
+  }
+
+  function updateEditButton() {
+    if (!viewer) return;
+    const an = viewer.editing;
+    const kurz = schmaleLeiste();
+    viewer.editBtn.textContent = an
+      ? (kurz ? 'Fertig' : 'Bearbeiten beenden')
+      : (kurz ? 'Bearbeiten' : 'Markierungen bearbeiten');
+    viewer.editBtn.title = an ? 'Bearbeiten beenden' : 'Markierungen bearbeiten';
+    viewer.editBtn.setAttribute('aria-pressed', String(an));
+    viewer.frame.classList.toggle('pa-frame--editing', an);
+    viewer.hint.textContent = an
+      ? HINT_EDIT
+      : (state.showNames ? HINT_DEFAULT : HINT_HIDDEN);
+  }
+
+  function toggleEditing() {
+    setEditing(!viewer || !viewer.editing);
+  }
+
+  function setEditing(an) {
+    if (!viewer || viewer.editing === Boolean(an)) return;
+    viewer.editing = Boolean(an);
+    // Beim Umschalten darf kein Zustand aus dem anderen Modus liegen bleiben:
+    // die Hervorhebung samt Personen-Panel gehört zum Ansehen, nicht zum
+    // Bearbeiten.
+    clearSolo();
+    closePopover();
+    // Bearbeiten bei ausgeblendeten Markierungen ergibt keinen Sinn — der
+    // Punkt wäre unsichtbar und laut markerLocked() ohnehin unbeweglich.
+    if (viewer.editing && !state.showNames) {
+      state.showNames = true;
+      updateNamesButton();
+    }
+    updateEditButton();
+    // Die Beschriftungen der Punkte sagen im Bearbeiten-Modus etwas anderes.
+    for (const marker of viewer.frame.querySelectorAll('.pa-marker[data-tag-id]')) {
+      syncMarkerLabel(marker);
+    }
   }
 
   // --- Einzelne Person hervorheben ------------------------------------------
@@ -679,7 +756,6 @@
 
     const dot = el('button', 'pa-marker__dot');
     dot.type = 'button';
-    dot.setAttribute('aria-label', name + ' — markiert. Ziehen zum Verschieben.');
 
     const label = el('button', 'pa-marker__name');
     label.type = 'button';
@@ -693,17 +769,11 @@
       removeTag(tag);
     });
 
-    // Schloss: gibt die Markierung zum Verschieben frei. Ohne das bleibt sie
-    // fixiert — sonst verrutscht sie beim Zoomen oder Verschieben der Ansicht.
-    const lock = el('button', 'pa-marker__lock');
-    lock.type = 'button';
-    lock.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      toggleUnlock(tag, marker);
-    });
-
-    marker.append(dot, label, del, lock);
-    syncLockButton(marker, tag);
+    marker.append(dot, label, del);
+    // Sitzt die Markierung ganz oben, wuerde das ✕ darueber aus dem Rahmen
+    // ragen — `.pa-stage` schneidet ab. Dann wandert es neben den Punkt.
+    marker.classList.toggle('pa-marker--edge-top', clamp01(tag.y) < 0.12);
+    syncMarkerLabel(marker);
 
     const openPerson = (ev) => {
       ev.stopPropagation();
@@ -711,8 +781,8 @@
         delete marker.dataset.suppressClick;
         return;
       }
-      // Zuwendung zu einer anderen Markierung fixiert die vorher freigegebene.
-      lockAllExcept(Number(tag.id));
+      // Im Bearbeiten-Modus gehoert der Tipp dem Verschieben, nicht der Person.
+      if (viewer && viewer.editing) return;
       togglePersonFocus(tag.personId);
     };
     // Der Punkt ist im ausgeblendeten Zustand unsichtbar — dort gehört sein
@@ -723,13 +793,19 @@
     });
     label.addEventListener('click', openPerson);
 
-    marker.addEventListener('contextmenu', (ev) => {
-      ev.preventDefault();
-      activateMarker(marker);
-    });
-
     attachDrag(marker, dot, tag);
     return marker;
+  }
+
+  /** Die Beschriftung des Punktes haengt am Bearbeiten-Modus. */
+  function syncMarkerLabel(marker) {
+    const dot = marker.querySelector('.pa-marker__dot');
+    const label = marker.querySelector('.pa-marker__name');
+    if (!dot) return;
+    const name = (label && label.textContent) || 'Person';
+    dot.setAttribute('aria-label', (viewer && viewer.editing)
+      ? name + ' — markiert. Ziehen zum Verschieben.'
+      : name + ' — markiert. Antippen zeigt die Person.');
   }
 
   function positionNode(node, x, y) {
@@ -737,76 +813,15 @@
     node.style.top = (clamp01(y) * 100) + '%';
   }
 
-  function activateMarker(marker) {
-    if (!viewer) return;
-    for (const node of viewer.frame.querySelectorAll('.pa-marker.is-active')) {
-      if (node !== marker) node.classList.remove('is-active');
-    }
-    marker.classList.add('is-active');
-    // Wendet man sich einer anderen Markierung zu, ist die vorherige fertig
-    // bearbeitet — sie wird wieder fixiert.
-    lockAllExcept(Number(marker.dataset.tagId));
-  }
-
-  /** Ist diese Markierung zum Verschieben freigegeben? */
+  /**
+   * Ist diese Markierung beweglich? Nur im Bearbeiten-Modus — sonst verrutschte
+   * sie beim Zoomen oder Verschieben der Ansicht. Ein frisch gesetzter Entwurf
+   * haengt ohnehin am Zeiger.
+   */
   function markerUnlocked(marker) {
     if (!viewer || !marker) return false;
     if (marker.classList.contains('pa-marker--draft')) return true;
-    return viewer.unlocked.has(Number(marker.dataset.tagId));
-  }
-
-  function toggleUnlock(tag, marker) {
-    if (!viewer) return;
-    const id = Number(tag.id);
-    if (viewer.unlocked.has(id)) {
-      viewer.unlocked.delete(id);
-    } else {
-      lockAllExcept(id);
-      viewer.unlocked.add(id);
-    }
-    syncLockButton(marker, tag);
-  }
-
-  /** Alle Markierungen ausser dieser wieder fixieren. */
-  function lockAllExcept(keepTagId) {
-    if (!viewer || !viewer.unlocked.size) return;
-    const keep = Number(keepTagId);
-    let veraendert = false;
-    for (const id of [...viewer.unlocked]) {
-      if (id === keep) continue;
-      viewer.unlocked.delete(id);
-      veraendert = true;
-    }
-    if (veraendert) refreshLockButtons();
-  }
-
-  function unlockNewTag(tagId) {
-    if (!viewer) return;
-    lockAllExcept(Number(tagId));
-    viewer.unlocked.add(Number(tagId));
-    refreshLockButtons();
-  }
-
-  function syncLockButton(marker, tag) {
-    const btn = marker.querySelector('.pa-marker__lock');
-    if (!btn) return;
-    const offen = markerUnlocked(marker);
-    const name = personName(tag.personId);
-    btn.textContent = offen ? '🔓' : '🔒';
-    btn.title = offen ? 'Markierung wieder fixieren' : 'Markierung zum Verschieben freigeben';
-    btn.setAttribute('aria-label', btn.title + ' (' + name + ')');
-    btn.setAttribute('aria-pressed', String(offen));
-    marker.classList.toggle('is-unlocked', offen);
-  }
-
-  /** Nach einer Zustandsänderung alle sichtbaren Schlösser nachziehen. */
-  function refreshLockButtons() {
-    if (!viewer || !viewer.frame) return;
-    for (const marker of viewer.frame.querySelectorAll('.pa-marker[data-tag-id]')) {
-      const id = Number(marker.dataset.tagId);
-      const tag = tagsOf(currentPhoto()).find((t) => Number(t.id) === id);
-      if (tag) syncLockButton(marker, tag);
-    }
+    return viewer.editing;
   }
 
   /**
@@ -841,19 +856,14 @@
     let startX = 0;
     let startY = 0;
     let pos = { x: tag.x, y: tag.y };
-    let pressTimer = 0;
-
-    const clearPress = () => {
-      if (pressTimer) { clearTimeout(pressTimer); pressTimer = 0; }
-    };
 
     handle.addEventListener('pointerdown', (ev) => {
       if (ev.button != null && ev.button > 0) return;   // Rechtsklick → contextmenu
       // Ausgeblendet: kein Verschieben. Das Ereignis steigt zum Rahmen auf und
       // wird dort wie ein Druck aufs Bild behandelt.
       if (markerLocked(marker)) return;
-      // Fixiert: Der Marker bleibt liegen. Anklicken wählt ihn weiterhin aus,
-      // erst das Schloss gibt ihn frei.
+      // Ausserhalb des Bearbeiten-Modus bleibt der Marker liegen; der Tipp
+      // gehört dann der Person.
       if (!markerUnlocked(marker)) return;
       pointerId = ev.pointerId;
       moved = false;
@@ -863,12 +873,6 @@
       try { handle.setPointerCapture(pointerId); } catch (err) { /* egal */ }
       marker.classList.add('is-dragging');
       closePopover();
-      clearPress();
-      pressTimer = setTimeout(() => {
-        if (moved) return;
-        activateMarker(marker);
-        marker.dataset.suppressClick = '1';
-      }, LONG_PRESS_MS);
     });
 
     handle.addEventListener('pointermove', (ev) => {
@@ -877,7 +881,6 @@
       const dy = ev.clientY - startY;
       if (!moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
       moved = true;
-      clearPress();
       ev.preventDefault();
       const rect = viewer.frame.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
@@ -891,7 +894,6 @@
     const finish = async (ev) => {
       if (pointerId === null || (ev && ev.pointerId !== pointerId)) return;
       pointerId = null;
-      clearPress();
       marker.classList.remove('is-dragging');
       if (!moved) return;
       marker.dataset.suppressClick = '1';
@@ -912,7 +914,6 @@
     handle.addEventListener('pointercancel', (ev) => {
       if (pointerId === null || ev.pointerId !== pointerId) return;
       pointerId = null;
-      clearPress();
       marker.classList.remove('is-dragging');
       positionNode(marker, tag.x, tag.y);
     });
@@ -1616,9 +1617,6 @@
       : { id: 'tmp-' + Date.now(), personId: Number(personId), x, y };
     if (!Array.isArray(photo.tags)) photo.tags = [];
     photo.tags.push(entry);
-    // Eine frisch gesetzte Markierung sitzt selten auf Anhieb richtig — sie
-    // startet darum freigegeben, damit man sie ohne Umweg zurechtrücken kann.
-    unlockNewTag(entry.id);
     // Sofort, ohne auf das stille Neuladen zu warten: Quiz und Personen-Panel
     // sollen die Person direkt mit Bild zeigen.
     syncPortrait();
@@ -1669,6 +1667,7 @@
       ev.preventDefault();
       ev.stopPropagation();
       if (viewer.popover) closePopover();
+      else if (viewer.editing) setEditing(false);
       else closeViewer();
       return;
     }

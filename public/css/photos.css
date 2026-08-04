@@ -105,9 +105,15 @@ body.pa-lock { overflow: hidden; }
 }
 .pa-bar__date { color: var(--text-soft); }
 .pa-bar__counter { flex: none; }
-.pa-bar__names { flex: none; }
+.pa-bar__names, .pa-bar__edit { flex: none; }
 @media (max-width: 519px) {
   .pa-bar__counter { display: none; }
+}
+/* Zwei Knoepfe nebeneinander passen auf einem Handy nicht mehr neben Titel und
+   Datum — dort tragen beide die Kurzform (siehe barLabels() in photos.js). */
+@media (max-width: 639px) {
+  .pa-bar { gap: var(--sp-1); }
+  .pa-bar__names, .pa-bar__edit { padding-inline: var(--sp-2); }
 }
 
 /* Bühne — der Rahmen wird per JS exakt auf die Bildfläche gesetzt */
@@ -252,7 +258,6 @@ body.pa-lock { overflow: hidden; }
 .pa-marker:hover,
 .pa-marker:focus-within,
 .pa-marker.is-hover,
-.pa-marker.is-active,
 .pa-marker.is-highlight { z-index: 5; }
 
 .pa-marker__dot {
@@ -281,8 +286,7 @@ body.pa-lock { overflow: hidden; }
 .pa-marker__dot:hover::before { transform: scale(1.16); opacity: 1; }
 .pa-marker.is-dragging .pa-marker__dot { cursor: grabbing; }
 .pa-marker.is-dragging .pa-marker__dot::before { transform: scale(1.25); opacity: 1; }
-.pa-marker.is-hover .pa-marker__dot::before,
-.pa-marker.is-active .pa-marker__dot::before { transform: scale(1.2); opacity: 1; }
+.pa-marker.is-hover .pa-marker__dot::before { transform: scale(1.2); opacity: 1; }
 
 .pa-marker.is-highlight .pa-marker__dot::before {
   background: var(--c-sun);
@@ -314,7 +318,6 @@ body.pa-lock { overflow: hidden; }
   transition: opacity var(--dur) var(--ease);
 }
 .pa-marker.is-hover .pa-marker__name,
-.pa-marker.is-active .pa-marker__name,
 .pa-marker.is-highlight .pa-marker__name { border-color: var(--c-sun-deep); }
 
 /* Markierungen ausgeblendet — beim Überfahren/Antippen trotzdem sichtbar.
@@ -329,7 +332,6 @@ body.pa-lock { overflow: hidden; }
 .pa-frame--no-names .pa-marker:hover .pa-marker__name,
 .pa-frame--no-names .pa-marker:focus-within .pa-marker__name,
 .pa-frame--no-names .pa-marker.is-hover .pa-marker__name,
-.pa-frame--no-names .pa-marker.is-active .pa-marker__name,
 .pa-frame--no-names .pa-marker.is-highlight .pa-marker__name {
   opacity: 1;
   pointer-events: auto;
@@ -343,14 +345,13 @@ body.pa-lock { overflow: hidden; }
 .pa-frame--no-names .pa-marker:hover .pa-marker__dot::before,
 .pa-frame--no-names .pa-marker:focus-within .pa-marker__dot::before,
 .pa-frame--no-names .pa-marker.is-hover .pa-marker__dot::before,
-.pa-frame--no-names .pa-marker.is-active .pa-marker__dot::before,
 .pa-frame--no-names .pa-marker.is-highlight .pa-marker__dot::before,
 .pa-frame--no-names .pa-marker.is-dragging .pa-marker__dot::before {
   opacity: 1;
 }
-/* Der ✕-Knopf ist ohnehin nur bei :hover / :focus-within / .is-active sichtbar
-   (siehe unten) — er verhält sich damit schon wie der Punkt und braucht hier
-   keine eigene Regel. */
+/* Der ✕-Knopf erscheint nur im Bearbeiten-Modus (siehe unten), und der
+   schaltet die Markierungen immer ein — die beiden Zustände treffen sich
+   darum nie. */
 
 /* Ausgeblendet lässt sich eine Markierung nicht verschieben (siehe photos.js).
    Der Zeiger zeigt darum die Geste des Bildes an, nicht die Greifhand. */
@@ -389,49 +390,24 @@ body.pa-lock { overflow: hidden; }
   pointer-events: none;
   transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
-/* Schloss neben dem ✕ — gibt die Markierung zum Verschieben frei.
-   Markierungen sind grundsätzlich fixiert, damit sie beim Zoomen und
-   Verschieben der Ansicht nicht versehentlich verrutschen. */
-.pa-marker__lock {
-  position: absolute; left: -50px; top: -30px;
-  display: grid; place-items: center;
-  width: 30px; height: 30px;
-  padding: 0;
-  font: inherit; font-size: var(--fs-xs); line-height: 1;
-  background: var(--bg-surface);
-  border: 2px solid var(--c-white);
-  border-radius: 50%;
-  box-shadow: var(--sh-sm);
-  cursor: pointer;
-  opacity: 0;
-  transform: scale(.7);
-  pointer-events: none;
-  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
+/* Sitzt die Markierung ganz oben, ragte das ✕ darüber aus dem Rahmen —
+   `.pa-stage` schneidet ab. Dann wandert es neben den Punkt. */
+.pa-marker--edge-top .pa-marker__del { left: 32px; top: -15px; }
 
-.pa-marker:hover .pa-marker__del,
-.pa-marker:focus-within .pa-marker__del,
-.pa-marker.is-active .pa-marker__del,
-.pa-marker:hover .pa-marker__lock,
-.pa-marker:focus-within .pa-marker__lock,
-.pa-marker.is-active .pa-marker__lock {
+/* Das ✕ erscheint ausschliesslich im Bearbeiten-Modus — bewusst nicht mehr
+   bei :hover. Hover gibt es auf Touch nicht, und ein Löschknopf, der auf
+   Desktop beim blossen Überfahren auftaucht, lädt zum Verklicken ein. */
+.pa-frame--editing .pa-marker__del {
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
 }
 
-/* Freigegeben: der Punkt wird zum Anfasser und hebt sich sichtbar ab, sonst
-   wüsste man nie, welche Markierung gerade beweglich ist. */
-.pa-marker.is-unlocked .pa-marker__lock {
-  opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
-  background: var(--c-sun);
-  border-color: var(--c-sun-deep);
-}
-.pa-marker.is-unlocked .pa-marker__dot { cursor: grab; }
-.pa-marker.is-unlocked.is-dragging .pa-marker__dot { cursor: grabbing; }
-.pa-marker.is-unlocked .pa-marker__dot::before {
+/* Im Bearbeiten-Modus wird jeder Punkt zum Anfasser und hebt sich ab, sonst
+   wüsste man nicht, dass die Markierungen gerade beweglich sind. */
+.pa-frame--editing .pa-marker__dot { cursor: grab; }
+.pa-frame--editing .pa-marker.is-dragging .pa-marker__dot { cursor: grabbing; }
+.pa-frame--editing .pa-marker__dot::before {
   background: var(--c-sun);
   border-color: var(--c-sun-deep);
 }

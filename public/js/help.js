@@ -32,23 +32,24 @@
         'Geh ins <b>Fotoalbum</b> und tippe ein Foto an. Dann tippst du im Bild direkt auf die Person.',
         'Es erscheint eine Liste — such den Namen heraus.',
         'Ist die Person noch gar nicht im Stammbaum? Dann wähle <b>«Neue Person anlegen»</b>, schreib den Namen und sag, wessen Kind sie ist. Sie steht danach automatisch auch im Stammbaum.',
-        'Stehen die Leute dicht beieinander und du kommst mit dem Finger nicht dazwischen? Dann setz die Markierung einfach irgendwo daneben, wo Platz ist, und zieh sie danach an die richtige Stelle.',
+        'Stehen die Leute dicht beieinander und du kommst mit dem Finger nicht dazwischen? Dann setz die Markierung einfach irgendwo daneben, wo Platz ist, und rück sie danach zurecht (siehe unten).',
         { hint: 'Zum Vergrössern gibt es <b>＋</b> und <b>－</b> oben rechts — oder zwei Finger. Bis zum Vierfachen. Die Punkte und Namen bleiben dabei gleich gross, damit sie die Gesichter nicht verdecken.' },
         'Tippst du <b>unter dem Bild</b> auf einen Namen, wird nur noch diese eine Markierung gezeigt und die Angaben zur Person gehen auf. Nochmals tippen zeigt wieder alle.'
       ]
     },
     {
-      icon: '🔒',
-      title: 'Markierungen verschieben — erst aufschliessen',
+      icon: '✎',
+      title: 'Markierungen verschieben oder löschen',
       blocks: [
-        'Damit beim Zoomen und Verschieben nichts aus Versehen verrutscht, sind gesetzte Markierungen <b>festgemacht</b>. Ziehen bewegt dann das Bild, nicht die Markierung.',
-        'Willst du eine wirklich verschieben:',
+        'Normalerweise öffnet ein Tipp auf eine Markierung die Person — das ist ja, was man meistens wissen will. Damit beim Zoomen nichts aus Versehen verrutscht, bleiben die Markierungen dabei <b>liegen</b>.',
+        'Willst du sie zurechtrücken oder wegnehmen, schaltest du oben rechts auf <b>«Markierungen bearbeiten»</b>. Dann gilt:',
         { list: [
-          'Die Markierung antippen — es erscheinen ein <b>🔒 Schloss</b> und ein <b>✕</b> zum Löschen.',
-          'Aufs Schloss tippen. Die Markierung wird <b>gelb</b> — jetzt lässt sie sich ziehen.',
-          'Fertig? Einfach eine andere Markierung antippen, dann ist sie wieder fest. Oder nochmals aufs Schloss.'
+          'Jede Markierung lässt sich <b>ziehen</b> — die Punkte werden gelb, damit du siehst, dass sie beweglich sind.',
+          'An jeder Markierung steht ein <b>✕</b> zum Entfernen. Die Person selbst bleibt dabei im Stammbaum.',
+          'Ein Tipp auf eine Markierung öffnet in diesem Modus <b>keine</b> Angaben mehr — sonst käme man beim Ziehen ständig ins Gehege.'
         ] },
-        { hint: 'Eine gerade neu gesetzte Markierung ist noch offen — die kannst du sofort zurechtrücken, ohne aufzuschliessen. Und es ist immer nur eine gleichzeitig offen.' }
+        'Fertig? <b>«Bearbeiten beenden»</b> antippen (oder <b>Esc</b> drücken). Danach öffnet ein Tipp wieder die Person.',
+        { hint: 'Ins Bild tippen legt auch im Bearbeiten-Modus eine neue Markierung an — das geht immer.' }
       ]
     },
     {
