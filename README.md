@@ -4,17 +4,44 @@ Passwortgeschützte Webapp für den Stammbaum einer Familie — nicht auf eine
 bestimmte Familie zugeschnitten. Welcher Name in der Kopfzeile steht, wird im
 Adminbereich eingestellt: Aus dem Familiennamen „Muster" wird „Muster Stammbaum".
 
-- **Stammbaum** — Paare als Knoten, Kinder darunter, Personendetails im Seitenpanel.
-  Bis zu zwei Partnerschaften pro Blutlinien-Person (links / rechts).
-- **Fotoalbum** — Gruppenfotos hochladen und Personen direkt im Bild markieren.
-- **Portraits** — pro Person ein Portrait hochladen. Fehlt eines, entsteht das Bild
-  automatisch als Ausschnitt aus dem aktuellsten Gruppenfoto, auf dem die Person
-  markiert ist; sonst bleiben die Initialen.
-- **Namen lernen** — Lernkärtchen mit Gesicht auf der Vorder- und Namen auf der
-  Rückseite. Elternpaar und Generationentiefe wählbar; wer nicht sass, kommt
-  später nochmals, bis er sitzt.
-- **Admin** — App-Name setzen, Fotos verwalten, Personen löschen (mit Vorschau der
-  Auswirkungen), Passwörter ändern.
+![Der Stammbaum: Paare als Knoten, Kinder darunter](docs/screenshots/01-stammbaum.png)
+
+## Was die App kann
+
+**Stammbaum** — Paare als Knoten, Kinder darunter, Personendetails im
+Seitenpanel. Bis zu zwei Partnerschaften pro Blutlinien-Person (links / rechts).
+Zoomen, verschieben, suchen — und auf ein Blatt Papier drucken.
+
+**Fotoalbum** — Gruppenfotos hochladen und Personen direkt im Bild markieren.
+Ein Tipp auf eine Markierung öffnet die Person, ein Tipp auf einen Namen
+darunter hebt sie im Bild hervor.
+
+![Das Fotoalbum mit drei Gruppenfotos](docs/screenshots/02-fotoalbum.png)
+
+![Ein Gruppenfoto mit markierten Personen](docs/screenshots/03-markierungen.png)
+
+**Portraits ohne Extraarbeit** — pro Person lässt sich ein Portrait hochladen.
+Fehlt eines, schneidet die App es selbst aus dem aktuellsten Gruppenfoto, auf
+dem die Person markiert ist. Wie gross der Ausschnitt sein muss, schätzt sie aus
+dem Abstand zur nächsten Markierung — dasselbe Signal, das eine
+Gesichtserkennung liefern würde, nur ohne Modell. Gibt es kein Foto, bleiben die
+Initialen.
+
+**Namen lernen** — Lernkärtchen mit dem Gesicht auf der Vorder- und dem Namen
+auf der Rückseite. Elternpaar und Generationentiefe sind wählbar; wer nicht
+sass, kommt später nochmals, bis er sitzt. Praktisch für alle, die frisch in
+eine grosse Familie hineingeheiratet sind.
+
+![Ein Lernkärtchen zeigt ein Gesicht, der Name steht auf der Rückseite](docs/screenshots/04-namen-lernen.png)
+
+**Admin** — App-Name setzen, Fotos verwalten, Personen löschen (mit Vorschau der
+Auswirkungen), Passwörter ändern.
+
+> Die Screenshots zeigen eine erfundene Beispielfamilie. Die Figuren auf den
+> Fotos sind die mitgelieferten Platzhalterbilder aus `public/img/` — es sind
+> keine echten Personen abgebildet.
+
+## Zugang
 
 Zugang über zwei Passwörter statt Benutzerkonten: ein Familien-Passwort für den
 Zugang und ein Admin-Passwort für den Adminbereich. Beide müssen mindestens
@@ -81,6 +108,7 @@ nicht.
 ├── data/                Persistent, nicht im Git
 │   ├── stammbaum.db     SQLite-Datenbank (WAL-Modus)
 │   └── uploads/         Hochgeladene Fotos
+├── docs/screenshots/    Bilder für dieses README
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
